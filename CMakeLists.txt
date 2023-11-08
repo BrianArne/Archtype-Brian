@@ -13,7 +13,9 @@ juce_add_plugin(ArcheTypeBrian
 set(SRC "../src")
 target_sources(ArcheTypeBrian
     PRIVATE
+        ${SRC}/PluginEditor.h
         ${SRC}/PluginEditor.cpp
+        ${SRC}/PluginProcessor.h
         ${SRC}/PluginProcessor.cpp)
 
 target_compile_definitions(ArcheTypeBrian

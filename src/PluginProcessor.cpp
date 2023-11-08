@@ -10,7 +10,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ), apvts(*this, nullptr, "params", createParameters())
 {
 }
 
@@ -185,4 +185,17 @@ void AudioPluginAudioProcessor::setStateInformation (const void* data, int sizeI
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new AudioPluginAudioProcessor();
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::createParameters()
+{
+    juce::AudioProcessorValueTreeState::ParameterLayout params;
+    
+    params.add(std::make_unique<juce::AudioParameterFloat>("GAIN",
+                                                           "Gain",
+                                                           0.0f,
+                                                           12.0f,
+                                                           1.0f));
+    return params;
+    
 }
