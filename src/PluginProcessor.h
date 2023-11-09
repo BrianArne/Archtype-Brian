@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "ScopeComponent.h"
 
 //==============================================================================
 class AudioPluginAudioProcessor final : public juce::AudioProcessor
@@ -43,13 +44,18 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
     
     //==============================================================================
-    
+    AudioBufferQueue<float> & getAudioBufferQueue() { return scopeDataQueue; }
     
     juce::AudioProcessorValueTreeState apvts;
+    juce::Atomic<bool> bypass { false };
     
 private:
     //==============================================================================
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
+    
+    float previousGain;
+    AudioBufferQueue<float> scopeDataQueue;
+    ScopeDataCollector<float> scopeDataCollector;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };

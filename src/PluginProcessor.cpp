@@ -11,6 +11,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        ), apvts(*this, nullptr, "params", createParameters())
+                        , scopeDataCollector(scopeDataQueue)
 {
 }
 
@@ -89,6 +90,7 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     juce::ignoreUnused (sampleRate, samplesPerBlock);
+    previousGain = juce::Decibels::decibelsToGain(apvts.getRawParameterValue("GAIN")->load());
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -125,6 +127,19 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                                               juce::MidiBuffer& midiMessages)
 {
     juce::ignoreUnused (midiMessages);
+    if (bypass.get() == true)
+        return;
+    
+    auto gain = juce::Decibels::decibelsToGain(apvts.getRawParameterValue("GAIN")->load());
+    if (juce::approximatelyEqual (gain, previousGain))
+    {
+        buffer.applyGain (gain);
+    }
+    else
+    {
+        buffer.applyGainRamp (0, buffer.getNumSamples(), previousGain, gain);
+        previousGain = gain;
+    }
 
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
@@ -148,9 +163,18 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
         auto* channelData = buffer.getWritePointer (channel);
-        juce::ignoreUnused (channelData);
-        // ..do something to the data...
+        for (int i = 0; i < buffer.getNumSamples(); i++) {
+            while (*channelData > 1.0f || *channelData < -1.0f) {
+                if (*channelData > 1.0f) {
+                    *channelData = 2.0f - *channelData;
+                }else if (*channelData < -1.0f) {
+                    *channelData = -2.0f - *channelData;
+                }
+            }
+            channelData++;
+        }
     }
+    scopeDataCollector.process(buffer.getReadPointer(0), (size_t)buffer.getNumSamples());
 }
 
 //==============================================================================
@@ -193,8 +217,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::c
     
     params.add(std::make_unique<juce::AudioParameterFloat>("GAIN",
                                                            "Gain",
-                                                           0.0f,
-                                                           12.0f,
+                                                           -6.0f,
+                                                           24.0f,
                                                            1.0f));
     return params;
     
